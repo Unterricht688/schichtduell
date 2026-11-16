@@ -1,0 +1,673 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}*,*::before,*::after{box-sizing:border-box}body{margin:0}</style>
+<title>Schichtduell</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo+Mono:wght@300;400;500&family=Inter:opsz,wght@14..32,300..600&display=swap">
+<style>
+/* Layout: phone-first single column. Light paper screens frame a dark top-down "camera view" canvas, like the dark video sections of a factory-intelligence site. Single designed look (light frame, dark camera), set explicitly. */
+:root{
+  --paper:#F7F6F5;  --card:#FFFFFF; --ink:#242424; --ink-2:#737373; --line:#E2E2E2;
+  --accent:#FF590D;            /* the AI: detections, its score */
+  --you:#1E9E94;               /* the player: teal, readable on light and dark */
+  --you-soft:#E2F2F0; --accent-soft:#FFEDE4;
+  --night:#171717;
+  --f-display:"Inter","Helvetica Neue",Arial,sans-serif;
+  --f-mono:"Chivo Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  color-scheme:light;
+}
+html,body{height:100%}
+[hidden]{display:none!important}
+body{background:var(--paper);color:var(--ink);font-family:var(--f-display);font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));}
+.app{max-width:480px;margin:0 auto;padding-block:16px 24px;display:flex;flex-direction:column;gap:14px}
+section{display:flex;flex-direction:column;gap:14px}
+.eyebrow{font-family:var(--f-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2)}
+h1,h2{font-weight:300;letter-spacing:-.025em;text-wrap:balance;margin:0}
+h1{font-size:clamp(40px,12vw,56px);line-height:1}
+h1 .ai{color:var(--accent)}
+h2{font-size:28px;line-height:1.1}
+p{margin:0}
+.muted{color:var(--ink-2)}
+.fine{font-family:var(--f-mono);font-size:10.5px;line-height:1.55;color:var(--ink-2)}
+.btn{appearance:none;border:0;border-radius:999px;background:var(--night);color:#fff;font:500 15px/1 var(--f-display);padding:16px 22px;cursor:pointer;width:100%;touch-action:manipulation}
+.btn:active{transform:scale(.98)}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.tut-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.tut-title{font-size:19px;font-weight:500;letter-spacing:-.01em}
+.tut-text{font-size:14px;line-height:1.4}
+.linkbtn{appearance:none;border:0;background:none;padding:4px 0;font:400 12px/1 var(--f-mono);color:var(--ink-2);text-decoration:underline;cursor:pointer}
+.tut-ok{color:var(--you)}
+.btn:focus-visible,.dbtn:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.types{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.type{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.type b{font-weight:500;font-size:14px}
+.type span{font-size:12px;color:var(--ink-2);line-height:1.35}
+.steps{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+.steps li{display:grid;grid-template-columns:34px 1fr;gap:8px;padding:10px 0;border-bottom:1px solid var(--line);font-size:14px}
+.steps .n{font-family:var(--f-mono);font-size:12px;color:var(--accent);padding-top:2px}
+
+/* game */
+#s-game{gap:8px}
+.board{display:grid;grid-template-columns:1fr auto 1fr;align-items:end;gap:8px}
+.side{display:flex;flex-direction:column;gap:2px}
+.side.r{align-items:flex-end;text-align:right}
+.who{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase}
+.who.you{color:var(--you)} .who.ai{color:var(--accent)}
+.pts{font-size:34px;font-weight:300;letter-spacing:-.03em;line-height:.95;font-variant-numeric:tabular-nums}
+.mid{display:flex;flex-direction:column;align-items:center;gap:4px;padding-bottom:4px}
+.clock{font-family:var(--f-mono);font-size:18px;font-variant-numeric:tabular-nums}
+.tbar{width:84px;height:3px;background:var(--line);border-radius:2px;overflow:hidden}
+.tbar i{display:block;height:100%;background:var(--ink);width:100%}
+.cam{position:relative;align-self:center;border-radius:14px;overflow:hidden;background:var(--night);box-shadow:0 1px 0 rgba(0,0,0,.04)}
+canvas{display:block;touch-action:none;-webkit-tap-highlight-color:transparent;cursor:crosshair}
+.hint{font-size:13.5px;color:var(--ink-2);text-align:center;min-height:20px}
+.decide{position:absolute;left:8px;right:8px;z-index:2;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:9px;box-shadow:0 10px 30px rgba(0,0,0,.45)}
+.decide .btn{padding:13px 18px}
+.decide .flag{font-family:var(--f-mono);font-size:12px;letter-spacing:.06em;color:var(--accent)}
+.decide .ctx{font-size:14px}
+.decide .ctx b{font-weight:600}
+.dbtns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.dbtn{appearance:none;border:1px solid var(--line);background:var(--paper);border-radius:999px;padding:13px 10px;font:500 14px/1.1 var(--f-display);color:var(--ink);cursor:pointer;touch-action:manipulation}
+.dbtn.primary{background:var(--night);color:#fff;border-color:var(--night)}
+.dtimer{height:3px;background:var(--line);border-radius:2px;overflow:hidden}
+.dtimer i{display:block;height:100%;width:100%;background:var(--accent)}
+.verdict{display:flex;flex-direction:column;gap:6px;border-left:2px solid var(--you);padding-left:12px}
+.verdict.bad{border-left-color:var(--accent)}
+.verdict b{font-weight:600}
+
+/* interlude + end */
+.fact{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;font-size:14.5px}
+.fact .src{display:block;margin-top:6px}
+.vs{font-size:clamp(60px,20vw,92px);font-weight:300;letter-spacing:-.04em;line-height:.95;font-variant-numeric:tabular-nums;display:flex;align-items:baseline;gap:.18em}
+.vs .y{color:var(--you)} .vs .a{color:var(--accent)} .vs .c{color:var(--line);font-size:.7em}
+table.tally{width:100%;border-collapse:collapse;font-size:14px}
+table.tally th{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);font-weight:400;text-align:left;padding:6px 0;border-bottom:1px solid var(--line)}
+table.tally td{padding:8px 0;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+table.tally td.n,table.tally th.n{text-align:right;width:44px}
+td.y{color:var(--you)} td.a{color:var(--accent)}
+.learn{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.learn li{display:grid;grid-template-columns:20px 1fr;gap:6px}
+.learn li::before{content:"→";font-family:var(--f-mono);color:var(--accent)}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- INTRO -->
+  <section id="s-intro">
+    <div class="eyebrow">Schichtduell · Fall Almetra</div>
+    <h1>Mensch gegen <span class="ai">KI</span>.</h1>
+    <p>Finde Verschwendung an der Montagelinie, <b>bevor die Almetra-KI sie markiert</b>. Drei Schichten, und die KI wird immer schneller.</p>
+    <button class="btn" id="b-start">Probelauf starten</button>
+    <button class="btn ghost" id="b-direct">Direkt zur Frühschicht</button>
+    <p class="fine">Lernspiel der TH Brandenburg, kein Angebot von Almetra.</p>
+  </section>
+
+  <!-- GAME -->
+  <section id="s-game" hidden>
+    <div class="board">
+      <div class="side"><span class="who you">Du</span><span class="pts" id="p-you">0</span></div>
+      <div class="mid"><span class="eyebrow" id="g-round">Frühschicht</span><span class="clock" id="g-clock">0:35</span><span class="tbar"><i id="g-tbar"></i></span></div>
+      <div class="side r"><span class="who ai">Almetra-KI</span><span class="pts" id="p-ai">0</span></div>
+    </div>
+    <div class="cam" id="cam"><canvas id="cv" aria-label="Montagelinie von oben. Tippe auf Verschwendung."></canvas><div class="decide" id="tut" hidden></div></div>
+    <p class="hint" id="g-hint">Tippe auf die Stelle, an der Zeit verloren geht.</p>
+  </section>
+
+  <!-- INTERLUDE -->
+  <section id="s-mid" hidden>
+    <div class="eyebrow" id="m-eyebrow">Ende der Frühschicht</div>
+    <div class="vs" id="m-vs"></div>
+    <p id="m-text"></p>
+    <div class="fact" id="m-fact"></div>
+    <button class="btn" id="b-next">Weiter</button>
+  </section>
+
+  <!-- END -->
+  <section id="s-end" hidden>
+    <div class="eyebrow">Ergebnis Schichtduell</div>
+    <div class="vs" id="e-vs"></div>
+    <p id="e-text"></p>
+    <table class="tally">
+      <thead><tr><th>Verschwendung</th><th class="n">Du</th><th class="n">KI</th></tr></thead>
+      <tbody id="e-rows"></tbody>
+    </table>
+    <div class="eyebrow">Das nimmst du mit</div>
+    <ul class="learn">
+      <li><span><b>Die KI schaut nie weg.</b> Mikrostopps, leere Träger und fehlende Schritte übersieht ein Mensch leicht, eine Kamera über viele Schichten nicht.</span></li>
+      <li><span><b>Die großen Verluste sind oft banal.</b> Laufwege, Material holen, Pausen zwischen den Zyklen: Hier holen Almetra-Kunden die ersten 10 % Produktivität, nicht in der Feinanalyse.</span></li>
+      <li><span><b>Almetra kombiniert beides.</b> Die KI findet das Warum, Menschen entscheiden und verbessern. Erfasst werden Prozesse, keine Personen.</span></li>
+    </ul>
+    <p class="muted">Gleich im Kahoot gefragt: Woran hast du einen Mikrostopp erkannt?</p>
+    <button class="btn" id="b-again">Nochmal spielen</button>
+    <p class="fine">Quellen: Fallstudie M. Wrobel; Interviews mit S. Homoceanu und M. Fischer; almetra.ai (Kundengeschichten Bosch, Grundfos; Series-A-Meldung vom 25.06.2026). Linie, Tempo und KI-Geschwindigkeit sind ein vereinfachtes Spielmodell. Erfasst werden Prozesse, keine Personen: die Figuren haben keine Gesichter.</p>
+  </section>
+</div>
+
+<script>
+(() => {
+  // ---------- constants ----------
+  const W = 258, H = 480;
+  const C = {
+    floor:'#151515', grid:'#1d1d1d', walk:'#262626', conveyor:'#262626', roller:'#323232', rail:'#3b3b3b',
+    bench:'#353535', benchTop:'#3f3f3f', worker:'#D9D5CF', workerShade:'#B7B2AB', part:'#EEEBE6', tray:'#4b4b4b',
+    pipOn:'#1E9E94', pipOff:'#5a5a5a', text:'#8a8a8a', textDim:'#5d5d5d', shelf:'#2d2d2d', box:'#6f6760', cart:'#3a3a3a',
+    ai:'#FF590D', you:'#3FC1B6', warn:'#E8E2D6'
+  };
+  const MONO = '"Chivo Mono", ui-monospace, Menlo, monospace';
+  const CONV_X = 185, CONV_W = 34;
+  const ST_Y = [72, 160, 248, 336, 424];
+  const HOME_X = 98, BENCH_X = 122, BENCH_W = 40;
+  const SHELF = {x:44, y:42};
+  const SPEED = 70, GAP = 24, PROC = 1.3, SPAWN = 1.75, WALK = 62;
+
+  const TYPES = {
+    material:{label:'Materialholen', ai:'MATERIALHOLEN'},
+    jam:{label:'Stau', ai:'STAU · NACHARBEIT'},
+    micro:{label:'Mikrostopp', ai:'MIKROSTOPP'},
+    empty:{label:'Leerer Träger', ai:'LEERER TRÄGER'},
+    tool:{label:'Werkzeugsuche', ai:'WERKZEUGSUCHE'},
+    skip:{label:'Schritt fehlt', ai:'SCHRITT FEHLT'},
+  };
+  const ROUNDS = [
+    {name:'Frühschicht',  dur:35, ai:4.0, every:3.0, max:1, pool:['material','jam','micro'], night:false},
+    {name:'Spätschicht',  dur:35, ai:3.0, every:2.5, max:2, pool:['material','jam','micro','empty','tool'], night:false},
+    {name:'Nachtschicht', dur:35, ai:2.2, every:2.0, max:3, pool:['material','jam','micro','empty','tool','skip'], night:true},
+  ];
+  const FACTS = [
+    {t:'Bosch Miskolc: Die Reports waren grün, trotzdem verließen Operatoren ihre Station, um Material zu holen oder Nachbarn zu helfen. Erst die Kameradaten zeigten, wie ungleich die Linie ausgelastet war.', s:'almetra.ai, Kundengeschichte Bosch'},
+    {t:'Grundfos: Nach acht Kaizens galt die Linie als ausgereizt. Almetra fand trotzdem Leerlauf durch klemmende Wagen und schlecht erreichbares Material. Ergebnis: +11 % Durchsatz in 3 Monaten.', s:'almetra.ai, Kundengeschichte Grundfos'},
+    {t:'Almetra beschreibt sich so: KI, die die echten Ursachen von Produktionsverlusten findet, plus Menschen, die dafür sorgen, dass gehandelt wird. Deshalb zeigt das Spiel beides: Die KI findet schneller, aber verbessern müssen Menschen.', s:'almetra.ai, Series-A-Meldung vom 25.06.2026'},
+  ];
+
+  // ---------- dom ----------
+  const $ = id => document.getElementById(id);
+  const screens = ['s-intro','s-game','s-mid','s-end'];
+  const show = id => { screens.forEach(s => $(s).hidden = s !== id); window.scrollTo(0,0); };
+  const cv = $('cv'), ctx = cv.getContext('2d');
+  let scale = 1, dpr = 1;
+  function sizeCanvas(){
+    const appW = Math.min(480, document.querySelector('.app').clientWidth);
+    const avail = window.innerHeight - 150;
+    const w = Math.max(250, Math.min(appW, avail * W / H));
+    dpr = Math.min(2, window.devicePixelRatio || 1);
+    scale = w / W;
+    cv.style.width = w + 'px'; cv.style.height = (w * H / W) + 'px';
+    cv.width = Math.round(w * dpr); cv.height = Math.round(w * H / W * dpr);
+  }
+  window.addEventListener('resize', () => { if (!$('s-game').hidden) sizeCanvas(); });
+
+  // ---------- state ----------
+  let G;
+  function homeOf(i){ return {x:HOME_X, y:ST_Y[i]}; }
+  function newLine(){
+    return {
+      t:0, parts:[], spawnAt:0.2, out:0,
+      st: ST_Y.map((y,i) => ({y, part:null, prog:0, jamUntil:0, stopUntil:0, trainUntil:0, skipNext:null, busy:false, mode:null})),
+      wk: ST_Y.map((y,i) => ({x:HOME_X, y, ang:0, legs:[], mul:1, anim:null, phase:Math.random()*6})),
+      seg: [0,0,0,0,0,0],
+      trails:[], boxes:[], floats:[], ripples:[], events:[], nextEmpty:null,
+      returnTrays: Array.from({length:9}, (_,k) => ({y: k*62})),
+    };
+  }
+  function newGame(){
+    G = Object.assign(newLine(), {round:0, mode:'idle', you:0, ai:0, roundYou:0, roundAi:0, timeLeft:0, nextEvt:0, lock:0,
+      byType:Object.fromEntries(Object.keys(TYPES).map(k => [k,{you:0,ai:0}]))});
+  }
+
+  // ---------- line simulation ----------
+  const segOf = y => { for (let k = 0; k < 5; k++) if (y < ST_Y[k] - 0.5) return k; return 5; };
+  function workerHome(i){ const w = G.wk[i]; return w.legs.length === 0 && Math.abs(w.x-HOME_X) < 1 && Math.abs(w.y-ST_Y[i]) < 1; }
+  function canWork(i){ const s = G.st[i]; return workerHome(i) && G.t >= s.jamUntil && G.t >= s.stopUntil; }
+  function procTime(i){ return PROC * (G.t < G.st[i].trainUntil ? 2.3 : 1); }
+  function spawnPart(){
+    const p = {y:-14, next:0, pips:[0,0,0,0,0], processing:false, empty:false, missing:-1, fade:0, id:Math.random()};
+    if (G.nextEmpty){ p.empty = true; const e = G.nextEmpty; G.nextEmpty = null; e.part = p; if (e.start === null){ e.start = G.t; e.aiAt = G.t + e.delay; } }
+    G.parts.push(p);
+  }
+  function stepLine(dt){
+    G.t += dt;
+    // spawn
+    if (G.t >= G.spawnAt){
+      if (!G.parts.some(p => p.y < 16)) { spawnPart(); G.spawnAt = G.t + SPAWN; }
+      else G.spawnAt = G.t + 0.2;
+    }
+    // stations
+    G.st.forEach((s,i) => {
+      if (!s.part) return;
+      if (canWork(i)) s.prog += dt;
+      if (s.prog >= procTime(i)){
+        const p = s.part;
+        if (s.skipNext){ p.missing = i; const e = s.skipNext; s.skipNext = null; e.part = p; e.start = G.t; e.aiAt = G.t + e.delay; }
+        else p.pips[i] = 1;
+        p.processing = false; p.next = i + 1; s.part = null; s.prog = 0;
+      }
+    });
+    // parts
+    G.parts.sort((a,b) => b.y - a.y);
+    for (let k = 0; k < G.parts.length; k++){
+      const p = G.parts[k];
+      if (p.fade > 0){ p.fade += dt; continue; }
+      if (p.processing) continue;
+      if (G.seg[segOf(p.y)] > G.t) continue;
+      let target = p.next < 5 ? ST_Y[p.next] : H + 40;
+      for (let j = k-1; j >= 0; j--){ const a = G.parts[j]; if (a.fade > 0) continue; target = Math.min(target, a.y - GAP); break; }
+      p.y = Math.min(p.y + SPEED*dt, Math.max(p.y, target));
+      if (p.next < 5 && p.y >= ST_Y[p.next] - 0.5){
+        const s = G.st[p.next];
+        if (p.empty){ p.next++; }
+        else if (!s.part){ s.part = p; p.processing = true; s.prog = 0; p.y = ST_Y[p.next]; }
+      }
+    }
+    G.parts = G.parts.filter(p => { if (p.y > H + 20){ if (!p.empty) G.out++; return false; } return p.fade < 0.45; });
+    // workers
+    G.wk.forEach((w,i) => {
+      w.phase += dt;
+      if (!w.legs.length) { w.anim = null; return; }
+      const leg = w.legs[0];
+      if (leg.move){
+        const dx = leg.move.x - w.x, dy = leg.move.y - w.y, d = Math.hypot(dx,dy), step = WALK * w.mul * dt;
+        if (d <= step){ w.x = leg.move.x; w.y = leg.move.y; w.legs.shift(); if (!w.legs.length) { w.mul = 1; w.ang = 0; } }
+        else { w.x += dx/d*step; w.y += dy/d*step; w.ang = Math.atan2(dy,dx); w.anim = 'walk';
+          if (!w.lastTrail || G.t - w.lastTrail > 0.09){ G.trails.push({x:w.x, y:w.y, t:G.t}); w.lastTrail = G.t; } }
+      } else if (leg.wait !== undefined){
+        w.anim = leg.anim; leg.wait -= dt; if (leg.face !== undefined) w.ang = leg.face;
+        if (leg.wait <= 0) w.legs.shift();
+      }
+    });
+    G.trails = G.trails.filter(t => G.t - t.t < 3.5);
+    G.returnTrays.forEach(r => { r.y -= 34*dt; if (r.y < -20) r.y += 9*62; });
+  }
+
+  // ---------- events ----------
+  function freeStations(range){ return range.filter(i => !G.st[i].busy && workerHome(i) && G.t >= G.st[i].jamUntil && G.t >= G.st[i].stopUntil && G.t >= G.st[i].trainUntil); }
+  const pick = a => a[Math.floor(Math.random()*a.length)];
+  function makeEvent(type, delay, opts = {}){
+    const e = {type, delay, start:G.t, aiAt:G.t + delay, st:-1, seg:-1, part:null, found:null, scored:opts.scored !== false, tutorial:!!opts.tutorial};
+    if (type === 'material' || type === 'tool'){
+      const cand = opts.st !== undefined ? [opts.st] : freeStations(type === 'material' ? [1,2,3,4] : [0,1,2,3,4]);
+      if (!cand.length) return null;
+      const i = pick(cand), w = G.wk[i], h = homeOf(i);
+      e.st = i; G.st[i].busy = true;
+      if (type === 'material') w.legs = [{move:{x:SHELF.x+16, y:SHELF.y+10}}, {wait:opts.tutorial ? 99 : 0.8, anim:'pick', face:Math.PI}, {move:h}];
+      else w.legs = [{move:{x:56, y:h.y+30}}, {wait:opts.long ? 99 : 3.6, anim:'search', face:Math.PI/2}, {move:h}];
+    } else if (type === 'jam'){
+      const cand = (opts.st !== undefined ? [opts.st] : freeStations([0,1,2,3,4])).filter(i => G.st[i].part); if (!cand.length) return null;
+      const i = pick(cand); e.st = i; G.st[i].busy = true; G.st[i].jamUntil = G.t + (opts.tutorial ? 99 : 6.5);
+    } else if (type === 'micro'){
+      const cand = opts.seg !== undefined ? [opts.seg] : [1,2,3,4,5].filter(k => G.seg[k] <= G.t && !G.events.some(x => x.seg === k)); if (!cand.length) return null;
+      e.seg = pick(cand); G.seg[e.seg] = G.t + (opts.tutorial ? 99 : 5.5);
+    } else if (type === 'empty'){
+      if (G.nextEmpty || G.events.some(x => x.type === 'empty' && !x.found)) return null;
+      e.start = null; e.aiAt = Infinity; G.nextEmpty = e;
+    } else if (type === 'skip'){
+      const cand = opts.st !== undefined ? [opts.st] : freeStations([0,1,2,3]); if (!cand.length || G.events.some(x => x.type === 'skip' && !x.found)) return null;
+      const i = pick(cand); e.st = i; G.st[i].busy = true; G.st[i].skipNext = e; e.start = null; e.aiAt = Infinity;
+    }
+    G.events.push(e);
+    return e;
+  }
+  function hitOf(e){
+    switch (e.type){
+      case 'material': case 'tool': { const w = G.wk[e.st]; return {x:w.x, y:w.y, r:26}; }
+      case 'jam': return {x:CONV_X - 18, y:ST_Y[e.st] - 26, r:40};
+      case 'micro': { const y0 = e.seg === 0 ? 0 : ST_Y[e.seg-1], y1 = e.seg === 5 ? H : ST_Y[e.seg]; return {x:CONV_X, y:(y0+y1)/2, r:Math.min(44,(y1-y0)/2+6)}; }
+      case 'empty': case 'skip': return e.part ? {x:CONV_X, y:e.part.y, r:24} : null;
+    }
+  }
+  function resolve(e, who){
+    e.found = who;
+    const h = hitOf(e) || {x:CONV_X, y:40, r:24};
+    const T = TYPES[e.type];
+    if (e.tutorial) G.boxes.push({x:h.x, y:h.y, r:h.r, who, label:(who === 'you' ? 'DU · ' : 'KI · ') + T.ai, t:G.t, follow:e});
+    if (e.scored){
+      if (who === 'you'){ G.you++; G.roundYou++; G.byType[e.type].you++; }
+      else { G.ai++; G.roundAi++; G.byType[e.type].ai++; }
+      G.boxes.push({x:h.x, y:h.y, r:h.r, who, label:(who === 'you' ? 'DU · ' : 'KI · ') + T.ai + (who === 'ai' ? ' ' + (0.86 + Math.random()*0.13).toFixed(2) : ''), t:G.t, follow:e});
+      G.floats.push({x:h.x, y:h.y - h.r - 4, who, t:G.t});
+      $('p-you').textContent = G.you; $('p-ai').textContent = G.ai;
+    }
+    // the found problem gets fixed
+    if (e.st >= 0) G.st[e.st].busy = false;
+    if (e.type === 'material' || e.type === 'tool'){ const w = G.wk[e.st]; w.legs = [{move:homeOf(e.st)}]; w.mul = 2.6; }
+    if (e.type === 'jam') G.st[e.st].jamUntil = G.t + 0.5;
+    if (e.type === 'micro') G.seg[e.seg] = G.t + 0.35;
+    if (e.type === 'empty' && e.part) e.part.fade = 0.001;
+    if (e.type === 'skip' && e.part){ e.part.pips[e.part.missing] = 1; e.part.missing = -1; }
+  }
+  function stepEvents(){
+    G.events.forEach(e => { if (!e.found && e.scored && G.t >= e.aiAt) resolve(e, 'ai'); });
+    G.events = G.events.filter(e => !e.found && !(e.part && e.part.y > H + 10));
+  }
+
+  // ---------- input ----------
+  cv.addEventListener('pointerdown', ev => {
+    if (G.mode !== 'play' && G.mode !== 'tutorial') return;
+    ev.preventDefault();
+    const r = cv.getBoundingClientRect();
+    const x = (ev.clientX - r.left) / scale, y = (ev.clientY - r.top) / scale;
+    if (G.t < G.lock){ return; }
+    let best = null, bd = 1e9;
+    G.events.forEach(e => {
+      if (e.found || e.start === null) return;
+      const h = hitOf(e); if (!h) return;
+      const d = Math.hypot(h.x - x, h.y - y);
+      if (d < h.r + 8 && d < bd){ best = e; bd = d; }
+    });
+    if (best) resolve(best, 'you');
+    else { G.ripples.push({x, y, t:G.t}); G.lock = G.t + 0.5; }
+  });
+
+  // ---------- drawing ----------
+  function rr(x,y,w,h,r){ ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x,y,w,h,r) : ctx.rect(x,y,w,h); }
+  function draw(){
+    ctx.setTransform(scale*dpr,0,0,scale*dpr,0,0);
+    const night = G.mode !== 'idle' && ROUNDS[G.round] && ROUNDS[G.round].night && G.mode === 'play';
+    // floor
+    ctx.fillStyle = C.floor; ctx.fillRect(0,0,W,H);
+    ctx.strokeStyle = C.grid; ctx.lineWidth = 1;
+    for (let x = 0; x <= W; x += 30){ ctx.beginPath(); ctx.moveTo(x+.5,0); ctx.lineTo(x+.5,H); ctx.stroke(); }
+    for (let y = 0; y <= H; y += 30){ ctx.beginPath(); ctx.moveTo(0,y+.5); ctx.lineTo(W,y+.5); ctx.stroke(); }
+    // walkway
+    ctx.setLineDash([6,6]); ctx.strokeStyle = '#2f2f2f'; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(68, 20); ctx.lineTo(68, H-10); ctx.stroke(); ctx.setLineDash([]);
+    // shelf (Lager)
+    rr(8, 18, 44, 58, 4); ctx.fillStyle = C.shelf; ctx.fill();
+    for (let r = 0; r < 3; r++) for (let c = 0; c < 2; c++){ rr(13 + c*19, 23 + r*17, 15, 12, 2); ctx.fillStyle = C.box; ctx.fill(); }
+    label('LAGER', 10, 88, C.textDim);
+    // return lane
+    ctx.fillStyle = '#1e1e1e'; ctx.fillRect(226, 0, 22, H);
+    G.returnTrays.forEach(r => { rr(229, r.y, 16, 14, 3); ctx.fillStyle = '#353535'; ctx.fill(); });
+    label('RÜCKLAUF', 232, H - 8, C.textDim, -Math.PI/2);
+    // conveyor
+    ctx.fillStyle = C.conveyor; ctx.fillRect(CONV_X - CONV_W/2, 0, CONV_W, H);
+    ctx.fillStyle = C.rail; ctx.fillRect(CONV_X - CONV_W/2 - 3, 0, 3, H); ctx.fillRect(CONV_X + CONV_W/2, 0, 3, H);
+    for (let k = 0; k < 6; k++){
+      const y0 = k === 0 ? 0 : ST_Y[k-1], y1 = k === 5 ? H : ST_Y[k];
+      const stopped = G.seg[k] > G.t;
+      ctx.save(); ctx.beginPath(); ctx.rect(CONV_X - CONV_W/2, y0, CONV_W, y1 - y0); ctx.clip();
+      const off = stopped ? (G.segOff = G.segOff || {}, G.segOff[k] ?? 0) : (G.t * SPEED) % 12;
+      if (!stopped){ (G.segOff = G.segOff || {})[k] = off; }
+      ctx.strokeStyle = C.roller; ctx.lineWidth = 2;
+      for (let y = y0 - 12 + off; y < y1 + 12; y += 12){ ctx.beginPath(); ctx.moveTo(CONV_X - CONV_W/2 + 2, y); ctx.lineTo(CONV_X + CONV_W/2 - 2, y); ctx.stroke(); }
+      ctx.restore();
+      if (stopped){
+        const blink = Math.floor(G.t*4) % 2 === 0;
+        ctx.fillStyle = 'rgba(232,226,214,0.07)'; ctx.fillRect(CONV_X - CONV_W/2, y0, CONV_W, y1 - y0);
+        if (blink){ ctx.fillStyle = 'rgba(232,226,214,0.22)'; ctx.beginPath(); ctx.arc(CONV_X + CONV_W/2 + 9, (y0+y1)/2, 8, 0, Math.PI*2); ctx.fill(); }
+        ctx.fillStyle = blink ? C.warn : '#444';
+        ctx.beginPath(); ctx.arc(CONV_X + CONV_W/2 + 9, (y0+y1)/2, 3.6, 0, Math.PI*2); ctx.fill();
+      } else { ctx.fillStyle = '#2f5a56'; ctx.beginPath(); ctx.arc(CONV_X + CONV_W/2 + 9, (y0+y1)/2, 2.4, 0, Math.PI*2); ctx.fill(); }
+    }
+    // benches, carts, station labels
+    G.st.forEach((s,i) => {
+      const y = s.y;
+      rr(BENCH_X, y - 22, BENCH_W, 44, 5); ctx.fillStyle = C.bench; ctx.fill();
+      if (G.t < s.jamUntil){ ctx.strokeStyle = `rgba(232,226,214,${0.25 + 0.25*Math.sin(G.t*10)})`; ctx.lineWidth = 1.5; ctx.stroke(); }
+      rr(BENCH_X + 4, y - 18, BENCH_W - 8, 36, 3); ctx.fillStyle = C.benchTop; ctx.fill();
+      // tool cart
+      rr(38, y + 22, 26, 16, 3); ctx.fillStyle = C.cart; ctx.fill();
+      ctx.fillStyle = '#555'; ctx.fillRect(42, y + 27, 8, 2); ctx.fillRect(52, y + 27, 8, 2); ctx.fillRect(44, y + 32, 14, 2);
+      label('S' + (i+1), BENCH_X + 2, y - 27, C.text);
+    });
+    // spaghetti trails
+    G.trails.forEach(t => { const a = 1 - (G.t - t.t)/3.5; ctx.fillStyle = `rgba(217,213,207,${0.28*a})`; ctx.beginPath(); ctx.arc(t.x, t.y, 1.4, 0, Math.PI*2); ctx.fill(); });
+    // parts
+    G.parts.forEach(p => {
+      const a = p.fade > 0 ? Math.max(0, 1 - p.fade/0.45) : 1;
+      const x = CONV_X + (p.fade > 0 ? -p.fade*120 : 0) + (p.processing && G.st[p.next] && G.t < G.st[p.next].jamUntil ? Math.sin(G.t*40)*1.5 : 0);
+      ctx.globalAlpha = a;
+      rr(x - 11, p.y - 8, 26, 22, 4); ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fill();
+      rr(x - 13, p.y - 11, 26, 22, 4); ctx.fillStyle = C.tray; ctx.fill();
+      if (!p.empty){
+        rr(x - 9, p.y - 8, 18, 12, 3); ctx.fillStyle = C.part; ctx.fill();
+        for (let k = 0; k < 5; k++){
+          const px = x - 8 + k*4, py = p.y + 7;
+          ctx.beginPath(); ctx.arc(px, py, 1.4, 0, Math.PI*2);
+          if (p.missing === k){ ctx.strokeStyle = '#e9e5df'; ctx.lineWidth = 0.9; ctx.stroke(); }
+          else { ctx.fillStyle = p.pips[k] ? C.pipOn : C.pipOff; ctx.fill(); }
+        }
+      } else { rr(x - 9, p.y - 8, 18, 12, 3); ctx.strokeStyle = '#5a5a5a'; ctx.lineWidth = 1; ctx.setLineDash([2,2]); ctx.stroke(); ctx.setLineDash([]); }
+      ctx.globalAlpha = 1;
+    });
+    // workers
+    G.wk.forEach((w,i) => {
+      const s = G.st[i];
+      const working = w.legs.length === 0 && s.part && canWork(i);
+      person(w.x, w.y, w.ang, w.anim, w.phase, working, 1);
+    });
+    // AI scan line
+    if (G.mode === 'play' || G.mode === 'tutorial'){
+      const sy = (G.t * 110) % (H + 80) - 40;
+      const g = ctx.createLinearGradient(0, sy - 24, 0, sy);
+      g.addColorStop(0, 'rgba(255,89,13,0)'); g.addColorStop(1, 'rgba(255,89,13,0.10)');
+      ctx.fillStyle = g; ctx.fillRect(0, sy - 24, W, 24);
+      ctx.fillStyle = 'rgba(255,89,13,0.35)'; ctx.fillRect(0, sy, W, 1);
+    }
+    // night
+    if (night){
+      ctx.fillStyle = 'rgba(10,14,28,0.28)'; ctx.fillRect(0,0,W,H);
+      const v = ctx.createRadialGradient(W/2, H/2, H*0.25, W/2, H/2, H*0.75);
+      v.addColorStop(0,'rgba(0,0,0,0)'); v.addColorStop(1,'rgba(0,0,0,0.55)'); ctx.fillStyle = v; ctx.fillRect(0,0,W,H);
+    }
+    // detection boxes
+    G.boxes = G.boxes.filter(b => G.t - b.t < 1.6);
+    G.boxes.forEach(b => {
+      const a = Math.min(1, 1.6 - (G.t - b.t)) ;
+      let x = b.x, y = b.y;
+      if (b.follow && (b.follow.type === 'material' || b.follow.type === 'tool')){ const w = G.wk[b.follow.st]; x = w.x; y = w.y; }
+      bracket(x, y, b.r, b.who === 'you' ? C.you : C.ai, b.label, a);
+    });
+    if (G.mode === 'tutorial' && TU && TU.ev && !TU.ev.found && TU.ev.start !== null && G.t - TU.shownAt > 2.5){
+      const h = hitOf(TU.ev);
+      if (h){ const k = (Math.sin(G.t*5)+1)/2; ctx.save(); ctx.strokeStyle = `rgba(255,255,255,${0.55 + 0.4*k})`; ctx.lineWidth = 2; ctx.setLineDash([5,4]);
+        ctx.beginPath(); ctx.arc(h.x, h.y, h.r + 4 + k*5, 0, Math.PI*2); ctx.stroke(); ctx.setLineDash([]);
+        ctx.font = `500 9px ${MONO}`; const ly = Math.max(28, h.y - h.r - 14), tw = ctx.measureText('HIER TIPPEN').width + 10, lx = Math.min(W - tw/2 - 4, Math.max(tw/2 + 4, h.x)); ctx.fillStyle = '#fff'; rr(lx - tw/2, ly - 9, tw, 13, 2); ctx.fill(); ctx.fillStyle = '#111'; ctx.textAlign = 'center'; ctx.fillText('HIER TIPPEN', lx, ly + 0.5); ctx.textAlign = 'left'; ctx.restore(); }
+    }
+    G.floats = G.floats.filter(f => G.t - f.t < 1);
+    G.floats.forEach(f => { const k = G.t - f.t; ctx.globalAlpha = 1 - k; ctx.font = `600 15px ${MONO}`; ctx.fillStyle = f.who === 'you' ? C.you : C.ai; ctx.textAlign = 'center'; ctx.fillText('+1', f.x, f.y - k*24); ctx.textAlign = 'left'; ctx.globalAlpha = 1; });
+    G.ripples = G.ripples.filter(r => G.t - r.t < 0.5);
+    G.ripples.forEach(r => { const k = (G.t - r.t)/0.5; ctx.strokeStyle = `rgba(200,200,200,${0.6*(1-k)})`; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(r.x, r.y, 8 + k*16, 0, Math.PI*2); ctx.stroke(); });
+    // HUD
+    ctx.fillStyle = 'rgba(21,21,21,0.75)'; ctx.fillRect(0,0,W,16);
+    label('CAM 03 · LINIE 3', 6, 11, C.text);
+    const live = Math.floor(G.t*2) % 2 === 0;
+    ctx.fillStyle = live ? C.you : '#2a4a47'; ctx.beginPath(); ctx.arc(W - 78, 8, 2.6, 0, Math.PI*2); ctx.fill();
+    label('LIVE · ANONYM', W - 71, 11, C.text);
+    ctx.fillStyle = 'rgba(21,21,21,0.75)'; ctx.fillRect(0,H-16,92,16);
+    label('OUTPUT ' + String(G.out).padStart(3,'0'), 6, H - 5, C.text);
+  }
+  function label(t, x, y, col, rot){
+    ctx.save(); ctx.font = `400 8.5px ${MONO}`; ctx.fillStyle = col; ctx.translate(x,y); if (rot) ctx.rotate(rot); ctx.fillText(t, 0, 0); ctx.restore();
+  }
+  function bracket(x, y, r, col, text, a){
+    ctx.save(); ctx.globalAlpha = a; ctx.strokeStyle = col; ctx.lineWidth = 2;
+    const s = r, L = Math.max(8, r*0.45);
+    [[-1,-1],[1,-1],[1,1],[-1,1]].forEach(([sx,sy]) => {
+      ctx.beginPath(); ctx.moveTo(x + sx*s, y + sy*s - sy*L); ctx.lineTo(x + sx*s, y + sy*s); ctx.lineTo(x + sx*s - sx*L, y + sy*s); ctx.stroke();
+    });
+    ctx.font = `500 8.5px ${MONO}`;
+    const tw = ctx.measureText(text).width + 8;
+    let lx = Math.min(W - tw - 4, Math.max(4, x - s)), ly = y - s - 13; if (ly < 18) ly = y + s + 3;
+    ctx.fillStyle = col; rr(lx, ly, tw, 12, 2); ctx.fill();
+    ctx.fillStyle = '#111'; ctx.fillText(text, lx + 4, ly + 8.8);
+    ctx.restore();
+  }
+  function person(x, y, ang, anim, ph, working, s){
+    ctx.save(); ctx.translate(x, y);
+    const bob = anim === 'walk' ? Math.sin(ph*12)*1.2 : 0;
+    ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.beginPath(); ctx.ellipse(2.5, 3.5, 9*s, 13*s, ang, 0, Math.PI*2); ctx.fill();
+    ctx.rotate(ang); ctx.scale(s, s);
+    // hands
+    let reach = 0, spread = 0;
+    if (working) reach = 6 + Math.sin(ph*9)*3;
+    if (anim === 'search'){ reach = 7; spread = Math.sin(ph*7)*5; }
+    if (anim === 'pick'){ reach = 9 + Math.sin(ph*6)*2; }
+    if (anim === 'walk'){ reach = Math.sin(ph*12)*4; }
+    ctx.fillStyle = C.workerShade;
+    ctx.beginPath(); ctx.arc(6 + reach, -8 + spread, 3, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(6 + (anim === 'walk' ? -reach : reach*0.85), 8 - spread, 3, 0, Math.PI*2); ctx.fill();
+    // shoulders + head (no face)
+    ctx.fillStyle = C.workerShade; ctx.beginPath(); ctx.ellipse(0 + bob*0.2, 0, 7, 12, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = C.worker; ctx.beginPath(); ctx.arc(1, 0, 6.5, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+
+  // ---------- loop ----------
+  let raf, last;
+  function loop(now){
+    const dt = Math.min(0.05, (now - last)/1000 || 0); last = now;
+    if (!document.hidden && G.mode !== 'idle'){
+      stepLine(dt);
+      if (G.mode === 'play'){
+        G.timeLeft -= dt;
+        const R = ROUNDS[G.round];
+        if (G.t >= G.nextEvt){
+          if (G.events.filter(e => !e.found).length < R.max){ const type = pick(R.pool); makeEvent(type, R.ai); }
+          G.nextEvt = G.t + R.every * (0.75 + Math.random()*0.5);
+        }
+        stepEvents();
+        const tl = Math.max(0, G.timeLeft);
+        $('g-clock').textContent = '0:' + String(Math.ceil(tl)).padStart(2,'0');
+        $('g-tbar').style.width = (tl / R.dur * 100) + '%';
+        if (G.timeLeft <= 0) endRound();
+      } else if (G.mode === 'tutorial'){ stepTutorial(); }
+    }
+    draw();
+    raf = requestAnimationFrame(loop);
+  }
+
+  // ---------- tutorial ----------
+  const TUT = [
+    {type:'material', opts:{st:1}, title:'Materialholen', text:'Eine Figur verlässt ihre Station und läuft zum Lager. Tippe auf die laufende Figur.'},
+    {type:'jam', opts:{st:2}, title:'Stau', text:'Station S3 hängt in Nacharbeit: Das Teil wackelt, der Tisch blinkt, dahinter stauen sich Teile. Tippe auf die Station oder den Stau davor.'},
+    {type:'micro', opts:{seg:2}, title:'Mikrostopp', text:'Ein Bandabschnitt steht still, das Licht rechts neben dem Band blinkt hell. Tippe auf den stehenden Abschnitt.'},
+    {type:'empty', opts:{}, title:'Leerer Träger', text:'Gleich fährt oben ein Werkstückträger ohne Teil los, nur mit gestricheltem Rahmen. Tippe auf den leeren Träger.'},
+    {type:'tool', opts:{st:0, long:true}, title:'Werkzeugsuche', text:'Eine Figur geht zum Werkzeugwagen neben ihrer Station und sucht. Tippe auf die Figur am Wagen.'},
+    {type:'skip', opts:{st:0}, title:'Schritt fehlt', text:'Jedes Teil bekommt an jeder Station einen petrolfarbenen Punkt. Gleich verlässt ein Teil S1 mit hohlem Punkt. Tippe auf dieses Teil.'},
+    {type:'material', opts:{st:1}, ai:true, title:'Die Almetra-KI', text:'Diesmal nicht tippen, nur zuschauen: Die KI markiert die Verschwendung orange. In den Schichten bekommt sie dafür den Punkt.'},
+  ];
+  let TU = null;
+  function placeCard(el, y){ el.style.top = y > H/2 ? '8px' : 'auto'; el.style.bottom = y > H/2 ? 'auto' : '8px'; }
+  function tutCard(step, n){
+    const c = $('tut');
+    c.innerHTML = `<div class="tut-head"><span class="eyebrow">Probelauf · ${n}/${TUT.length}</span><button class="linkbtn" id="tut-skip" type="button">Überspringen</button></div>
+      <div class="tut-title">${step.title}</div><div class="tut-text">${step.text}</div>`;
+    placeCard(c, 0); c.hidden = false;
+    $('tut-skip').addEventListener('click', () => { $('tut').hidden = true; newGame(); startRound(0); });
+  }
+  function startTutorial(){
+    Object.assign(G, newLine());
+    G.mode = 'tutorial'; G.round = 0;
+    for (let k = 0; k < 160; k++) stepLine(0.05);
+    TU = {i:-1, phase:'gap', until:G.t + 0.8, ev:null, shownAt:0};
+    $('g-round').textContent = 'Probelauf'; $('g-clock').textContent = '0/' + TUT.length; $('g-tbar').style.width = '100%';
+    $('p-you').textContent = '0'; $('p-ai').textContent = '0';
+    $('g-hint').hidden = true;
+    show('s-game'); sizeCanvas();
+  }
+  function tutMake(step){
+    const e = makeEvent(step.type, step.ai ? 2.6 : 99, Object.assign({scored:false, tutorial:!step.ai}, step.opts));
+    if (e && step.ai) e.tutorial = true;
+    return e;
+  }
+  function stepTutorial(){
+    const T = TU; if (!T) return;
+    if (T.phase === 'gap' && G.t >= T.until){
+      const step = TUT[T.i + 1];
+      if (!step){ T.phase = 'done'; tutDone(); return; }
+      const e = tutMake(step);
+      if (!e){ T.until = G.t + 0.3; return; }
+      T.i++; T.ev = e; T.shownAt = G.t; T.phase = 'wait';
+      $('g-clock').textContent = (T.i+1) + '/' + TUT.length;
+      tutCard(step, T.i + 1);
+    }
+    if (T.phase === 'wait'){
+      const e = T.ev, step = TUT[T.i];
+      if (e.start === null) T.shownAt = G.t;
+      if (!e.found && e.part && (e.part.y > H - 6 || !G.parts.includes(e.part))){
+        G.events = G.events.filter(x => x !== e); if (e.st >= 0) G.st[e.st].busy = false;
+        const n = tutMake(step); if (n){ T.ev = n; T.shownAt = G.t; }
+        return;
+      }
+      if (step.ai && !e.found && G.t >= e.aiAt) resolve(e, 'ai');
+      if (e.found){
+        G.events = G.events.filter(x => x !== e);
+        const c = $('tut');
+        const msg = step.ai
+          ? (e.found === 'ai' ? 'Die KI war schneller. In den Schichten zählt das als Punkt für sie, und sie wird mit jeder Schicht schneller.' : 'Du warst sogar schneller als die KI. Genau so holst du in den Schichten deine Punkte.')
+          : 'Gefunden. In den Schichten bekommst du dafür einen Punkt, wenn du schneller bist als die KI.';
+        c.innerHTML = `<div class="tut-head"><span class="eyebrow">Probelauf · ${T.i+1}/${TUT.length}</span></div><div class="tut-title tut-ok">${step.ai ? 'So arbeitet die KI.' : step.title + ': erkannt.'}</div><div class="tut-text">${msg}</div>`;
+        T.phase = 'ok'; T.until = G.t + (step.ai ? 2.8 : 1.6);
+      }
+    }
+    if (T.phase === 'ok' && G.t >= T.until){ T.phase = 'gap'; T.until = G.t + 0.4; }
+  }
+  function tutDone(){
+    const c = $('tut');
+    c.innerHTML = `<div class="tut-head"><span class="eyebrow">Probelauf geschafft</span></div>
+      <div class="tut-title">Bereit für die Frühschicht?</div>
+      <div class="tut-text">Wer zuerst tippt, bekommt den Punkt. Danebentippen sperrt dich eine halbe Sekunde. Die KI wird mit jeder Schicht schneller.</div>
+      <button class="btn" id="tut-go" type="button">Frühschicht starten</button>`;
+    placeCard(c, 0); c.hidden = false;
+    $('tut-go').addEventListener('click', () => { c.hidden = true; newGame(); startRound(0); });
+  }
+
+  // ---------- rounds ----------
+  function startRound(r){
+    Object.assign(G, newLine());
+    G.round = r; G.mode = 'play'; G.roundYou = 0; G.roundAi = 0;
+    G.timeLeft = ROUNDS[r].dur; G.nextEvt = 2.2; G.lock = 0;
+    for (let k = 0; k < 160; k++) stepLine(0.05); // pre-fill the line
+    G.nextEvt = G.t + 1.8;
+    $('g-round').textContent = ROUNDS[r].name + ' · ' + (r+1) + '/3';
+    $('g-hint').textContent = r === 0 ? 'Tippe auf die Stelle, an der Zeit verloren geht.' : r === 1 ? 'Neu: leere Träger und Werkzeugsuche.' : 'Neu: Teile mit fehlendem Punkt. Die KI ist jetzt schneller.';
+    $('g-hint').hidden = false; $('tut').hidden = true; TU = null;
+    $('p-you').textContent = G.you; $('p-ai').textContent = G.ai;
+    show('s-game'); sizeCanvas();
+  }
+  function vsHTML(a, b){ return `<span class="y">${a}</span><span class="c">:</span><span class="a">${b}</span>`; }
+  function endRound(){
+    G.mode = 'idle';
+    const r = G.round, R = ROUNDS[r];
+    $('m-eyebrow').textContent = 'Ende der ' + R.name;
+    $('m-vs').innerHTML = vsHTML(G.roundYou, G.roundAi);
+    $('m-text').textContent = G.roundYou > G.roundAi ? `Du warst in dieser Schicht schneller als die KI. Gesamt steht es ${G.you} : ${G.ai}.`
+      : G.roundYou === G.roundAi ? `Unentschieden in dieser Schicht. Gesamt steht es ${G.you} : ${G.ai}.`
+      : `Die KI war in dieser Schicht schneller. Gesamt steht es ${G.you} : ${G.ai}.`;
+    $('m-fact').innerHTML = FACTS[r].t + `<span class="fine src">Quelle: ${FACTS[r].s}</span>`;
+    $('b-next').textContent = r < 2 ? ROUNDS[r+1].name + ' starten' : 'Zum Ergebnis';
+    show('s-mid');
+  }
+
+  // ---------- result ----------
+  function finish(){
+    G.mode = 'idle';
+    $('e-vs').innerHTML = vsHTML(G.you, G.ai);
+    $('e-text').textContent = G.you > G.ai
+      ? `Du hast die KI geschlagen. Respekt, über drei Schichten gelingt das am Band kaum jemandem dauerhaft.`
+      : `Die KI hat ${G.ai} von ${G.you + G.ai} Verschwendungen zuerst gefunden. Sie wird nicht müde und schaut nie weg, auch nicht in der Nachtschicht.`;
+    const rows = Object.entries(TYPES).filter(([k]) => G.byType[k].you + G.byType[k].ai > 0)
+      .map(([k,t]) => `<tr><td>${t.label}</td><td class="n y">${G.byType[k].you}</td><td class="n a">${G.byType[k].ai}</td></tr>`).join('');
+    $('e-rows').innerHTML = rows;
+    show('s-end');
+  }
+
+  // ---------- wiring ----------
+  $('b-start').addEventListener('click', () => { newGame(); startTutorial(); });
+  $('b-direct').addEventListener('click', () => { newGame(); startRound(0); });
+  $('b-next').addEventListener('click', () => { if (G.round < 2) startRound(G.round + 1); else finish(); });
+  $('b-again').addEventListener('click', () => { newGame(); show('s-intro'); });
+  newGame();
+  (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(() => { last = performance.now(); raf = requestAnimationFrame(loop); });
+})();
+</script>
+</body>
+</html>
