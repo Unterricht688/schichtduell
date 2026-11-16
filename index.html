@@ -546,12 +546,12 @@ td.y{color:var(--you)} td.a{color:var(--accent)}
 
   // ---------- tutorial ----------
   const TUT = [
-    {type:'material', opts:{st:1}, title:'Materialholen', text:'Eine Figur verlässt ihre Station und läuft zum Lager. Tippe auf die laufende Figur.'},
-    {type:'jam', opts:{st:2}, title:'Stau', text:'Station S3 hängt in Nacharbeit: Das Teil wackelt, der Tisch blinkt, dahinter stauen sich Teile. Tippe auf die Station oder den Stau davor.'},
-    {type:'micro', opts:{seg:2}, title:'Mikrostopp', text:'Ein Bandabschnitt steht still, das Licht rechts neben dem Band blinkt hell. Tippe auf den stehenden Abschnitt.'},
-    {type:'empty', opts:{}, title:'Leerer Träger', text:'Gleich fährt oben ein Werkstückträger ohne Teil los, nur mit gestricheltem Rahmen. Tippe auf den leeren Träger.'},
-    {type:'tool', opts:{st:0, long:true}, title:'Werkzeugsuche', text:'Eine Figur geht zum Werkzeugwagen neben ihrer Station und sucht. Tippe auf die Figur am Wagen.'},
-    {type:'skip', opts:{st:0}, title:'Schritt fehlt', text:'Jedes Teil bekommt an jeder Station einen petrolfarbenen Punkt. Gleich verlässt ein Teil S1 mit hohlem Punkt. Tippe auf dieses Teil.'},
+    {type:'material', opts:{st:1}, cue:'Wer zum Lager läuft, lässt seine Station stillstehen.', title:'Materialholen', text:'Eine Figur verlässt ihre Station und läuft zum Lager. Tippe auf die laufende Figur.'},
+    {type:'jam', opts:{st:2}, cue:'Wackelndes Teil und blinkender Tisch, davor stauen sich Teile.', title:'Stau', text:'Station S3 hängt in Nacharbeit: Das Teil wackelt, der Tisch blinkt, dahinter stauen sich Teile. Tippe auf die Station oder den Stau davor.'},
+    {type:'micro', opts:{seg:2}, cue:'Ein Bandabschnitt steht, das Licht neben dem Band blinkt hell.', title:'Mikrostopp', text:'Ein Bandabschnitt steht still, das Licht rechts neben dem Band blinkt hell. Tippe auf den stehenden Abschnitt.'},
+    {type:'empty', opts:{}, cue:'Gestrichelter Rahmen heißt: Der Träger fährt ohne Teil.', title:'Leerer Träger', text:'Gleich fährt oben ein Werkstückträger ohne Teil los, nur mit gestricheltem Rahmen. Tippe auf den leeren Träger.'},
+    {type:'tool', opts:{st:0, long:true}, cue:'Die Figur steht am Werkzeugwagen statt an ihrer Station.', title:'Werkzeugsuche', text:'Eine Figur geht zum Werkzeugwagen neben ihrer Station und sucht. Tippe auf die Figur am Wagen.'},
+    {type:'skip', opts:{st:0}, cue:'Ein hohler Punkt auf dem Teil heißt: Ein Schritt wurde übersprungen.', title:'Schritt fehlt', text:'Jedes Teil bekommt an jeder Station einen petrolfarbenen Punkt. Gleich verlässt ein Teil S1 mit hohlem Punkt. Tippe auf dieses Teil.'},
     {type:'material', opts:{st:1}, ai:true, title:'Die Almetra-KI', text:'Diesmal nicht tippen, nur zuschauen: Die KI markiert die Verschwendung orange. In den Schichten bekommt sie dafür den Punkt.'},
   ];
   let TU = null;
@@ -604,11 +604,13 @@ td.y{color:var(--you)} td.a{color:var(--accent)}
         const msg = step.ai
           ? (e.found === 'ai' ? 'Die KI war schneller. In den Schichten zählt das als Punkt für sie, und sie wird mit jeder Schicht schneller.' : 'Du warst sogar schneller als die KI. Genau so holst du in den Schichten deine Punkte.')
           : 'Gefunden. In den Schichten bekommst du dafür einen Punkt, wenn du schneller bist als die KI.';
-        c.innerHTML = `<div class="tut-head"><span class="eyebrow">Probelauf · ${T.i+1}/${TUT.length}</span></div><div class="tut-title tut-ok">${step.ai ? 'So arbeitet die KI.' : step.title + ': erkannt.'}</div><div class="tut-text">${msg}</div>`;
-        T.phase = 'ok'; T.until = G.t + (step.ai ? 2.8 : 1.6);
+        const cue = step.cue ? `<div class="tut-text"><b>Merke:</b> ${step.cue}</div>` : '';
+        c.innerHTML = `<div class="tut-head"><span class="eyebrow">Probelauf · ${T.i+1}/${TUT.length}</span></div><div class="tut-title tut-ok">${step.ai ? 'So arbeitet die KI.' : step.title + ': erkannt.'}</div><div class="tut-text">${msg}</div>${cue}
+          <button class="btn" id="tut-next" type="button">Weiter</button>`;
+        T.phase = 'ok';
+        $('tut-next').addEventListener('click', () => { if (T.phase === 'ok'){ T.phase = 'gap'; T.until = G.t + 0.3; } });
       }
     }
-    if (T.phase === 'ok' && G.t >= T.until){ T.phase = 'gap'; T.until = G.t + 0.4; }
   }
   function tutDone(){
     const c = $('tut');
